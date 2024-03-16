@@ -332,16 +332,24 @@ class DiscreteVAE(nn.Module):
     return quant, emb_loss, info
 
   def decode(self, quant, training=False):
+    print("shape: quant1", quant.shape)
+    # print("quant:", quant)
     quant = self.post_quant_conv(quant)
+    print("shape: quant2", quant.shape)
+    # print("quant:", quant)
     dec = self.decoder(quant, training)
+    print("shape: dec", dec.shape)
+    # print("dec:", dec)
     return dec
 
   def decode_code(self, code_b):
-    quant_b = self.quantize.get_codebook_entry(code_b)
+    print("shape: code_b", code_b.shape)
+    quant_b = self.quantize.get_codebook_entry(code_b) # t5x_layers.py get_codebook_entry
+    print("shape: quant_b", quant_b.shape)
     bs, seq_len, dim = quant_b.shape
-    size = int(math.sqrt(seq_len))
-    quant_b = jnp.reshape(quant_b, (bs, size, size, dim))
-    dec = self.decode(quant_b)
+    size = int(math.sqrt(seq_len)) # 画像の縦横の16
+    quant_b = jnp.reshape(quant_b, (bs, size, size, dim)) # (batch, width, height, dim)
+    dec = self.decode(quant_b) # 上の関数
     return dec
 
   def get_codebook_indices(self, x, vae_decode=False, training=False):
@@ -950,6 +958,10 @@ class Transformer(nn.Module):
     logits = jnp.where(logits_mask, -1e10, logits)
     text_logits = logits[:,:text_length]
     image_logits = logits[:,text_length:]
+    print("shape: text_logits", text_logits.shape)
+    print("text_logits:", text_logits)
+    print("shape: image_logits", image_logits.shape)
+    print("image_logits:", image_logits)
 
     return text_logits, image_logits, image_decoder_targets
 

@@ -395,9 +395,14 @@ class VectorQuantizer(nn.Module):
       jnp.float32,
       axes=(('vocab', 'embed')))
 
-  def get_codebook_entry(self, indices):
-    min_encodings = jax.nn.one_hot(indices, self.n_e, dtype=self.dtype)
-    z_q = jnp.einsum('bqk,kd->bqd', min_encodings, self.embedding)
+  def get_codebook_entry(self, indices): # 与えられたインデックスに対応するコードブックエントリを取得
+    # (batch, 16x16) -> (batch, 16x16, 16384)
+    min_encodings = jax.nn.one_hot(indices, self.n_e, dtype=self.dtype) # one-hotベクトルに変換
+    print("min_encodings.shape", min_encodings.shape)
+    # one-hotベクトルとembeddingをかけて、コードブックエントリを取得
+    # (batch, 16x16, 16384) @ (16384, dim) = (batch, 16x16, dim)
+    z_q = jnp.einsum('bqk,kd->bqd', min_encodings, self.embedding) 
+    print("z_q.shape", z_q.shape)
     return z_q
 
   @nn.compact

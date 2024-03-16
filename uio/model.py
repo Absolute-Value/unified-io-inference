@@ -87,7 +87,7 @@ class UnifiedIOModel(nn.Module):
       text_decoder_length=None,
       image_decoder_length=None,
   ):
-    self.module = module
+    self.module = module # Transformer module
     self._text_decoder_length = text_decoder_length
     self._image_decoder_length = image_decoder_length
 
@@ -223,12 +223,14 @@ class UnifiedIOModel(nn.Module):
           output_options,
           method=self.module.encode_target_image
         )
+        print("image_decoder_targets:", image_decoder_targets)
 
         # Build auto-regressive inputs
         image_start_token = self.module.config.vocab_size - 1
         image_decoder_inputs = jnp.concatenate([
           jnp.zeros((image_decoder_targets.shape[0], 1), dtype=jnp.int32) + image_start_token,
           image_decoder_targets[:, :-1]], axis=1)
+        print("image_decoder_inputs:", image_decoder_inputs)
 
         # Predict EOS to start following the training scheme
         text_decoder_inputs = jnp.zeros([decoded_size, 1], jnp.int32)
@@ -248,6 +250,9 @@ class UnifiedIOModel(nn.Module):
         enable_dropout=False,
         method=self.module.decode
       )
+      print("text_logits:", text_logits)
+      print("image_logits:", image_logits)
+      print("image_decoder_targets:", image_decoder_targets)
 
       vocab_size = 33152
       if text_answer_options:
@@ -521,15 +526,23 @@ class UnifiedIOModel(nn.Module):
         image_decodes = decodes[:, -1, -256:]
       decodes = decodes[:, :, :-256]
 
+      print("transformer output image shape:", image_decodes.shape)
+      # print("transformer output image:", image_decodes)
       image_decodes = image_decodes - self.module.config.vocab_size
+      print("vocab minus image shape:", image_decodes.shape)
+      print("vocab minus image:", image_decodes)
+      print("image 1", image_decodes[0])
       img = self.module.apply(
         {'params': params},
-        method=self.module.decode_code,
+        method=self.module.decode_code, # network.py decode_codeが呼び出されてる
         code_b=image_decodes)
+      print("img shape:", img.shape)
 
       if return_all_decodes:
         img = jnp.reshape(img, decodes.shape[:2] + img.shape[1:])
         image_decodes = jnp.reshape(image_decodes, decodes.shape[:2] + image_decodes.shape[1:])
+      # print("image_decodes3 shape:", image_decodes.shape)
+      # print("image_decodes3:", image_decodes)
       out["image"] = jnp.clip((img+1)/2.0, 0, 1)
       out["image_tokens"] = image_decodes
 
